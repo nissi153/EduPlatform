@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>수강신청 시스템</title>
     <style>
+        /* 기존 CSS는 여기에 그대로 유지됩니다. */
         * {
             margin: 0;
             padding: 0;
@@ -445,6 +446,70 @@
             justify-content: center;
         }
 
+        /* Calendar Specific Styles */
+        .calendar-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px; /* Course section과 Registered courses 아래에 위치 */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 월, 화, 수, 목, 금 */
+            gap: 1px;
+            background-color: #e5e7eb; /* Grid lines */
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .calendar-header-cell, .calendar-cell {
+            padding: 10px 5px;
+            text-align: center;
+            background-color: white;
+            font-size: 14px;
+            min-height: 80px; /* Adjust as needed */
+            position: relative;
+        }
+
+        .calendar-header-cell {
+            background-color: #f3f4f6;
+            font-weight: 600;
+            color: #374151;
+            padding: 12px 5px;
+        }
+
+        .calendar-cell.empty {
+            background-color: #f9fafb;
+        }
+
+        .calendar-course-item {
+            background-color: #a5b4fc; /* Blue for courses */
+            color: #4338ca;
+            border-radius: 6px;
+            padding: 6px;
+            margin: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            text-align: left;
+            word-break: break-word;
+            position: absolute; /* Absolute positioning for time slots */
+            left: 0;
+            right: 0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            border: 1px solid #818cf8;
+            cursor: help; /* Help cursor for more info */
+        }
+
+        /* Different colors for different courses (optional) */
+        .calendar-course-item[data-department="컴퓨터공학과"] { background-color: #a5b4fc; color: #4338ca; border-color: #818cf8;}
+        .calendar-course-item[data-department="수학과"] { background-color: #fca5a5; color: #dc2626; border-color: #f87171;}
+        .calendar-course-item[data-department="영어영문학과"] { background-color: #a7f3d0; color: #065f46; border-color: #6ee7b7;}
+        .calendar-course-item[data-department="물리학과"] { background-color: #fed7aa; color: #ea580c; border-color: #fb923c;}
+
+
         /* Responsive */
         @media (max-width: 768px) {
             .main-content {
@@ -462,6 +527,17 @@
             
             .modal-info {
                 grid-template-columns: 1fr;
+            }
+
+            .calendar-grid {
+                grid-template-columns: 1fr; /* On small screens, stack days vertically */
+            }
+            .calendar-header-cell, .calendar-cell {
+                min-height: auto;
+            }
+            .calendar-course-item {
+                position: static; /* Remove absolute positioning on small screens */
+                margin: 5px auto;
             }
         }
     </style>
@@ -481,7 +557,6 @@
     </header>
 
     <div class="container">
-        <!-- Status Section -->
         <div class="status-section">
             <h2>
                 <svg class="icon" viewBox="0 0 24 24">
@@ -508,9 +583,7 @@
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="main-content">
-            <!-- Course Search and List -->
             <div class="course-section">
                 <h2 class="section-title">
                     <svg class="icon" viewBox="0 0 24 24">
@@ -543,11 +616,9 @@
                 </div>
 
                 <div class="course-list" id="courseList">
-                    <!-- Courses will be populated here -->
-                </div>
+                    </div>
             </div>
 
-            <!-- Registered Courses -->
             <div class="registered-courses">
                 <h2 class="section-title">신청한 강의</h2>
                 <div class="registered-list" id="registeredList">
@@ -557,9 +628,27 @@
                 </div>
             </div>
         </div>
+
+        <div class="calendar-section">
+            <h2 class="section-title">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                나의 시간표
+            </h2>
+            <div class="calendar-grid" id="calendarGrid">
+                <div class="calendar-header-cell">월</div>
+                <div class="calendar-header-cell">화</div>
+                <div class="calendar-header-cell">수</div>
+                <div class="calendar-header-cell">목</div>
+                <div class="calendar-header-cell">금</div>
+                </div>
+        </div>
     </div>
 
-    <!-- Modal -->
     <div class="modal" id="courseModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -688,6 +777,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             renderCourses();
             updateStatus();
+            renderCalendar(); // Add this line to render calendar on load
             
             // Event listeners
             document.getElementById('searchInput').addEventListener('input', filterCourses);
@@ -739,8 +829,8 @@
             
             return courses.filter(course => {
                 const matchesSearch = course.name.toLowerCase().includes(searchTerm) ||
-                                    course.code.toLowerCase().includes(searchTerm) ||
-                                    course.professor.toLowerCase().includes(searchTerm);
+                                      course.code.toLowerCase().includes(searchTerm) ||
+                                      course.professor.toLowerCase().includes(searchTerm);
                 const matchesDepartment = selectedDepartment === '전체' || course.department === selectedDepartment;
                 return matchesSearch && matchesDepartment;
             });
@@ -753,6 +843,25 @@
         function isRegistered(courseId) {
             return registeredCourses.some(course => course.id === courseId);
         }
+
+        // Helper function to parse time strings
+        function parseCourseTime(timeString) {
+            const parts = timeString.split(' '); // e.g., "월/수 09:00-10:30"
+            const days = parts[0].split('/'); // ["월", "수"]
+            const [startTime, endTime] = parts[1].split('-'); // ["09:00", "10:30"]
+
+            const convertToMinutes = (time) => {
+                const [h, m] = time.split(':').map(Number);
+                return h * 60 + m;
+            };
+
+            return {
+                days: days,
+                start: convertToMinutes(startTime),
+                end: convertToMinutes(endTime)
+            };
+        }
+
 
         function registerCourse(courseId) {
             const course = courses.find(c => c.id === courseId);
@@ -773,7 +882,22 @@
                 return;
             }
 
-            const timeConflict = registeredCourses.some(registered => registered.time === course.time);
+            // Time conflict check
+            const newCourseTime = parseCourseTime(course.time);
+            const timeConflict = registeredCourses.some(registered => {
+                const registeredTime = parseCourseTime(registered.time);
+                
+                // Check for overlapping days
+                const commonDays = registeredTime.days.filter(day => newCourseTime.days.includes(day));
+                if (commonDays.length > 0) {
+                    // Check for overlapping times on common days
+                    const maxStartTime = Math.max(newCourseTime.start, registeredTime.start);
+                    const minEndTime = Math.min(newCourseTime.end, registeredTime.end);
+                    return maxStartTime < minEndTime; // Times overlap if max(start) < min(end)
+                }
+                return false;
+            });
+
             if (timeConflict) {
                 alert('시간이 겹치는 강의가 있습니다.');
                 return;
@@ -785,6 +909,7 @@
             renderCourses();
             renderRegisteredCourses();
             updateStatus();
+            renderCalendar(); // Update calendar after registration
             closeModal();
             alert('수강신청이 완료되었습니다!');
         }
@@ -797,6 +922,7 @@
             renderCourses();
             renderRegisteredCourses();
             updateStatus();
+            renderCalendar(); // Update calendar after cancellation
             alert('수강신청이 취소되었습니다.');
         }
 
@@ -884,6 +1010,46 @@
                 closeModal();
             }
         });
+
+        // --- Calendar Functions ---
+        function renderCalendar() {
+            const calendarGrid = document.getElementById('calendarGrid');
+            const daysOfWeek = ['월', '화', '수', '목', '금'];
+            const hours = Array.from({ length: 10 }, (_, i) => 9 + i); // 9시부터 18시까지
+
+            // Clear previous content, but keep headers
+            calendarGrid.querySelectorAll('.calendar-cell, .calendar-time-label').forEach(el => el.remove());
+
+            // Add time labels to the first column (if desired, not implemented in current grid)
+            // For a simpler grid, we'll assume a fixed height per cell and courses will float within it
+
+            // Create empty cells for each day
+            const dayCells = {};
+            daysOfWeek.forEach(day => {
+                const cell = document.createElement('div');
+                cell.classList.add('calendar-cell');
+                cell.dataset.day = day; // Use data-attribute to identify day
+                dayCells[day] = cell;
+                calendarGrid.appendChild(cell);
+            });
+
+            // Populate calendar with registered courses
+            registeredCourses.forEach(course => {
+                const parsedTime = parseCourseTime(course.time);
+
+                parsedTime.days.forEach(day => {
+                    const cell = calendarGrid.querySelector(`.calendar-cell[data-day="${day}"]`);
+                    if (cell) {
+                        const courseElement = document.createElement('div');
+                        courseElement.classList.add('calendar-course-item');
+                        courseElement.dataset.department = course.department; // For specific styling
+                        courseElement.title = `${course.name} (${course.professor})\n${course.time}`; // Tooltip
+                        courseElement.innerHTML = `<strong>${course.code}</strong><br>${course.name} (${course.professor})<br>${course.time.split(' ')[1]}`; // Display time
+                        cell.appendChild(courseElement);
+                    }
+                });
+            });
+        }
     </script>
 </body>
 </html>
